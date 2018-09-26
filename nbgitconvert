@@ -1,0 +1,173 @@
+#!/usr/bin/env python
+
+"""
+Convert juptyer notebooks to html, markdown, or pdf
+durint git commits
+
+INSTALL:
+1. chmod +x nbgitconvert
+2. to setup up pre-commit hook run "./nbgitconvert --setup"
+
+The setup step will create a git hook that, for any .ipynb files staged for commit, will:
+1. convert them to the format(s) specified in nbgitconvert.ini placing them in a
+   rendered/{output_format}/ directory
+2. commit those newly converted files
+"""
+import subprocess
+import argparse
+import os
+import ConfigParser
+
+
+convert_dict = {
+    'markdown': {'ext': 'md', 'dir': 'rendered/md/', 'default': 'no'},
+    'html': {'ext': 'html', 'dir': 'rendered/html/', 'default': 'yes'},
+    'pdf': {'ext': 'pdf', 'dir': 'rendered/pdf/', 'default': 'no'}
+}
+CONFIG_LOCATION = 'nbgitconvert.ini'
+
+
+def create_config():
+    """create config file with default output type setting written to {CONFIG_LOCATION}"""
+    lines = ["[output_types]"]
+    for output_type, d in convert_dict.iteritems():
+        lines.append('%s = %s' % (output_type, d['default']))
+    if os.path.exists(CONFIG_LOCATION):
+        return  # if the config already exists, don't overwrite it
+    with open(CONFIG_LOCATION, "w") as f:
+        f.write('\n'.join(lines))
+
+
+def setup():
+    """
+        1. create a config file (written to {CONFIG_LOCATION}) if one doesn't exist
+        2. create a git pre-commit hook to run this script before every commit
+    """
+    create_config()
+    src = '../../nbgitconvert'
+    dst = '.git/hooks/pre-commit'
+    try:
+        os.symlink(src, dst)
+        print "creating sym link from %s to %s" % (src, dst)
+    except OSError as e:
+        if 'File exists' in e.strerror:
+            print(
+                'A pre-commit file already exists at %s, you must remove that file '
+                'and rerun setup to create the nbgitconvert hook.'
+                % dst
+            )
+        else:
+            raise e
+    return
+
+
+def system(*args, **kwargs):
+    """Run system command."""
+    kwargs.setdefault('stdout', subprocess.PIPE)
+    proc = subprocess.Popen(args, **kwargs)
+    out, err = proc.communicate()
+    return out
+
+
+def system_with_exitcode(*args, **kwargs):
+    """Run system command and return an exit code."""
+    kwargs.setdefault('stdout', subprocess.PIPE)
+    proc = subprocess.Popen(args, **kwargs)
+    out, err = proc.communicate()
+    return proc.returncode
+
+
+def get_changed_files():
+    """Get python files from 'files to commit' git cache list."""
+    files = []
+    filelist = system('git', 'diff', '--cached', '--name-status').strip()
+    print 'git diff --cached --name-status'
+    for line in filelist.split('\n'):
+        print line
+        try:
+            action, filename = line.strip().split('\t')
+            print filename
+            if filename.endswith('.ipynb') and action != 'D':
+                files.append(filename)
+        except Exception:
+            raise
+    return files
+
+
+def convert(files, output_type):
+    """run nbconvert to {output_type} on list of {files}"""
+    output_dir_ext = convert_dict[output_type]['dir']
+    convert_count = 0
+    for file in files:
+        file_dir = file_dir = os.path.dirname(os.path.realpath(file))
+        output_dir = '%s/%s' % (file_dir, output_dir_ext)
+        args = ['jupyter', 'nbconvert', '--to']
+        args.append(output_type)
+        args.append(file)
+        args.append('--output-dir=%s' % output_dir)
+        print ' '.join(args)
+        exitcode = system_with_exitcode(*args)
+        if exitcode == 0:
+            convert_count += 1
+    return convert_count
+
+
+def gitadd(files, output_type):
+    """git add all newly (re)rendered notebook files"""
+    output_dir_ext = convert_dict[output_type]['dir']
+    for file in files:
+        file_dir = file_dir = os.path.dirname(os.path.realpath(file))
+        output_dir = '%s/%s*' % (file_dir, output_dir_ext)
+        exitcode = system_with_exitcode('git', 'add', output_dir)
+        if exitcode != 0:
+            raise Exception('git add failed for %s' % output_dir)
+
+
+def process(files, output_type):
+    """convert notebooks files to {output_type} and git add the rendered notebook files"""
+    convert_count = convert(files, output_type)
+    if convert_count > 0:
+        gitadd(files, output_type)
+
+
+def main(args):
+    if args['setup']:
+        setup()
+        return
+
+    if args['all']:
+        files = filter(
+            lambda x: x.endswith('.ipynb'),
+            [f for f in os.listdir('.') if os.path.isfile(f)]
+        )
+    else:
+        files = get_changed_files()
+
+    if len(files) == 0:
+        print "No files are staged for commit. Run with the --all flag to run on all files"
+        return
+
+    if args['pdf']:
+        process(files, 'pdf')
+    if args['markdown']:
+        process(files, 'markdown')
+    if args['html']:
+        process(files, 'html')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Process Config Location")
+    parser.add_argument('--all', action='store_true')
+    parser.add_argument('--setup', action='store_true')
+    try:
+        config = ConfigParser.ConfigParser()
+        config.read(CONFIG_LOCATION)
+        args = vars(parser.parse_args())
+        for option in config.options('output_types'):
+            args[option] = config.getboolean('output_types', option)
+    except Exception:
+        parser.add_argument('--html', action='store_true')
+        parser.add_argument('--markdown', action='store_true')
+        parser.add_argument('--pdf', action='store_true')
+        args = vars(parser.parse_args())
+    main(args)
