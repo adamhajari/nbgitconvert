@@ -48,7 +48,7 @@ def setup():
     dst = '.git/hooks/pre-commit'
     try:
         os.symlink(src, dst)
-        print "creating sym link from %s to %s" % (src, dst)
+        print("creating sym link from %s to %s" % (src, dst))
     except OSError as e:
         if 'File exists' in e.strerror:
             print(
@@ -81,12 +81,10 @@ def get_changed_files():
     """Get python files from 'files to commit' git cache list."""
     files = []
     filelist = system('git', 'diff', '--cached', '--name-status').strip()
-    print 'git diff --cached --name-status'
     for line in filelist.split('\n'):
-        print line
         try:
             action, filename = line.strip().split('\t')
-            print filename
+            print(filename)
             if filename.endswith('.ipynb') and action != 'D':
                 files.append(filename)
         except Exception:
@@ -105,7 +103,7 @@ def convert(files, output_type):
         args.append(output_type)
         args.append(file)
         args.append('--output-dir=%s' % output_dir)
-        print ' '.join(args)
+        print(' '.join(args))
         exitcode = system_with_exitcode(*args)
         if exitcode == 0:
             convert_count += 1
@@ -144,7 +142,6 @@ def main(args):
         files = get_changed_files()
 
     if len(files) == 0:
-        print "No files are staged for commit. Run with the --all flag to run on all files"
         return
 
     if args['pdf']:
