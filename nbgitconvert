@@ -94,17 +94,21 @@ def get_changed_files():
 
 def convert(files, output_type):
     """run nbconvert to {output_type} on list of {files}"""
+    root_dir = os.getcwd()
     output_dir_ext = convert_dict[output_type]['dir']
     convert_count = 0
     for file in files:
-        file_dir = file_dir = os.path.dirname(os.path.realpath(file))
+        file_path = os.path.realpath(file)
+        file_dir = os.path.dirname(file_path)
+        os.chdir(file_dir)
         output_dir = '%s/%s' % (file_dir, output_dir_ext)
         args = ['jupyter', 'nbconvert', '--to']
         args.append(output_type)
-        args.append(file)
+        args.append(file_path)
         args.append('--output-dir=%s' % output_dir)
         print(' '.join(args))
         exitcode = system_with_exitcode(*args)
+        os.chdir(root_dir)
         if exitcode == 0:
             convert_count += 1
     return convert_count
