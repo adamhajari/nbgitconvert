@@ -1,5 +1,5 @@
 # nbgitconvert
-A git hook to automatically render jupyter notebooks to html, markdown, pdf, etc. on git commits. Automates keeping rendered versions of notebooks in-sync with their parents.
+Automatically render jupyter notebooks to html, markdown or pdf on git commits. Works with Bitbucket, no plugins necessary.
 
 ## Install/Setup
 To install, move the `nbgitconvert` file to the root of your repo and run:
