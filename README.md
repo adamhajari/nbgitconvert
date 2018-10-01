@@ -1,5 +1,5 @@
 # nbgitconvert
-A git hook to automatically render jupyter notebooks to html, markdown, pdf, etc. on git commits. Automates keeping rendered versions of notebooks in-sync with their parents.
+Automatically render jupyter notebooks to html, markdown or pdf on git commits. Works with Bitbucket, no plugins necessary.
 
 ## Install/Setup
 To install, move the `nbgitconvert` file to the root of your repo and run:
@@ -11,9 +11,11 @@ This does two things:
  2. create a git hook such that nbgitconvert runs everytime a \*.ipynb file is committed.
 
 ## the config file
-`nbgitconvert.ini` contains a line for every supported output type and whether to convert to that output type. `nbgitconvert` will convert all committed \*.ipynb files to all output types specified in the `nbgitconvert.ini` file.
+in the `[output_types]` section there is a line for every supported output type and whether to convert to that output type. `nbgitconvert` will convert all committed \*.ipynb files to all output types specified in the `nbgitconvert.ini` file.By default, only html is marked for output.
 
-By default, only html is marked for output. Update the config generated during the setup step as needed. Note that in the sample `nbgitconver.ini` file in this repo all formats have been set to "yes". The rendered notebooks in the `jupyter notebooks/rendered/` directory were created from this config.
+The output path can also be specified in the config. Include {output_type} in the path to save each output type to a different directory.
+
+Update the config generated during the setup step as needed. Note that in the sample `nbgitconver.ini` file in this repo all formats have been set to "yes". The rendered notebooks in the `jupyter notebooks/rendered/` directory were created from this config.
 
 
 ## Usage

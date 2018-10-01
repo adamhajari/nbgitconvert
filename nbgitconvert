@@ -20,20 +20,25 @@ import ConfigParser
 
 
 convert_dict = {
-    'markdown': {'ext': 'md', 'dir': 'rendered/md/', 'default': 'no'},
-    'html': {'ext': 'html', 'dir': 'rendered/html/', 'default': 'yes'},
-    'pdf': {'ext': 'pdf', 'dir': 'rendered/pdf/', 'default': 'no'}
+    'markdown': {'ext': 'md', 'default': 'no'},
+    'html': {'ext': 'html', 'default': 'yes'},
+    'pdf': {'ext': 'pdf', 'default': 'no'}
 }
 CONFIG_LOCATION = 'nbgitconvert.ini'
 
 
 def create_config():
     """create config file with default output type setting written to {CONFIG_LOCATION}"""
+    if os.path.exists(CONFIG_LOCATION):
+        return  # if the config already exists, don't overwrite it
+
     lines = ["[output_types]"]
     for output_type, d in convert_dict.iteritems():
         lines.append('%s = %s' % (output_type, d['default']))
-    if os.path.exists(CONFIG_LOCATION):
-        return  # if the config already exists, don't overwrite it
+    lines.append("")
+    lines.append("[output_dir]")
+    lines.append("path = rendered/{output_type}")
+
     with open(CONFIG_LOCATION, "w") as f:
         f.write('\n'.join(lines))
 
@@ -82,6 +87,8 @@ def get_changed_files():
     files = []
     filelist = system('git', 'diff', '--cached', '--name-status').strip()
     for line in filelist.split('\n'):
+        if line == '':
+            continue
         try:
             action, filename = line.strip().split('\t')
             print(filename)
@@ -92,10 +99,10 @@ def get_changed_files():
     return files
 
 
-def convert(files, output_type):
+def convert(files, output_type, output_dir):
     """run nbconvert to {output_type} on list of {files}"""
     root_dir = os.getcwd()
-    output_dir_ext = convert_dict[output_type]['dir']
+    output_dir_ext = output_dir.format(output_type=output_type)
     convert_count = 0
     for file in files:
         file_path = os.path.realpath(file)
@@ -114,9 +121,9 @@ def convert(files, output_type):
     return convert_count
 
 
-def gitadd(files, output_type):
+def gitadd(files, output_type, output_dir):
     """git add all newly (re)rendered notebook files"""
-    output_dir_ext = convert_dict[output_type]['dir']
+    output_dir_ext = output_dir.format(output_type=output_type)
     for file in files:
         file_dir = file_dir = os.path.dirname(os.path.realpath(file))
         output_dir = '%s/%s*' % (file_dir, output_dir_ext)
@@ -125,11 +132,11 @@ def gitadd(files, output_type):
             raise Exception('git add failed for %s' % output_dir)
 
 
-def process(files, output_type):
+def process(files, output_type, output_dir):
     """convert notebooks files to {output_type} and git add the rendered notebook files"""
-    convert_count = convert(files, output_type)
+    convert_count = convert(files, output_type, output_dir)
     if convert_count > 0:
-        gitadd(files, output_type)
+        gitadd(files, output_type, output_dir)
 
 
 def main(args):
@@ -149,11 +156,11 @@ def main(args):
         return
 
     if args['pdf']:
-        process(files, 'pdf')
+        process(files, 'pdf', args['output_dir'])
     if args['markdown']:
-        process(files, 'markdown')
+        process(files, 'markdown', args['output_dir'])
     if args['html']:
-        process(files, 'html')
+        process(files, 'html', args['output_dir'])
 
 
 if __name__ == '__main__':
@@ -166,7 +173,12 @@ if __name__ == '__main__':
         args = vars(parser.parse_args())
         for option in config.options('output_types'):
             args[option] = config.getboolean('output_types', option)
-    except Exception:
+        args['output_dir'] = config.get('output_dir', 'path')
+    except ConfigParser.NoSectionError:
+        pass
+    except Exception as e:
+        print e
+        raise
         parser.add_argument('--html', action='store_true')
         parser.add_argument('--markdown', action='store_true')
         parser.add_argument('--pdf', action='store_true')
