@@ -2,7 +2,7 @@
 
 """
 Convert juptyer notebooks to html, markdown, or pdf
-durint git commits
+during git commits
 
 INSTALL:
 1. chmod +x nbgitconvert
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     except ConfigParser.NoSectionError:
         pass
     except Exception as e:
-        print e
+        print(e)
         raise
         parser.add_argument('--html', action='store_true')
         parser.add_argument('--markdown', action='store_true')
