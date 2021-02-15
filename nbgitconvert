@@ -69,7 +69,7 @@ def setup():
 def system(*args, **kwargs):
     """Run system command."""
     kwargs.setdefault('stdout', subprocess.PIPE)
-    proc = subprocess.Popen(args, **kwargs)
+    proc = subprocess.Popen(args, **kwargs, encoding="utf8")
     out, err = proc.communicate()
     return out
 
@@ -77,7 +77,7 @@ def system(*args, **kwargs):
 def system_with_exitcode(*args, **kwargs):
     """Run system command and return an exit code."""
     kwargs.setdefault('stdout', subprocess.PIPE)
-    proc = subprocess.Popen(args, **kwargs)
+    proc = subprocess.Popen(args, **kwargs, encoding="utf8")
     out, err = proc.communicate()
     return proc.returncode
 
