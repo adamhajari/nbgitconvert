@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Convert juptyer notebooks to html, markdown, or pdf
@@ -16,7 +16,7 @@ The setup step will create a git hook that, for any .ipynb files staged for comm
 import subprocess
 import argparse
 import os
-import ConfigParser
+import configparser
 
 
 convert_dict = {
@@ -33,7 +33,7 @@ def create_config():
         return  # if the config already exists, don't overwrite it
 
     lines = ["[output_types]"]
-    for output_type, d in convert_dict.iteritems():
+    for output_type, d in convert_dict.items():
         lines.append('%s = %s' % (output_type, d['default']))
     lines.append("")
     lines.append("[output_dir]")
@@ -168,13 +168,13 @@ if __name__ == '__main__':
     parser.add_argument('--all', action='store_true')
     parser.add_argument('--setup', action='store_true')
     try:
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(CONFIG_LOCATION)
         args = vars(parser.parse_args())
         for option in config.options('output_types'):
             args[option] = config.getboolean('output_types', option)
         args['output_dir'] = config.get('output_dir', 'path')
-    except ConfigParser.NoSectionError:
+    except configparser.NoSectionError:
         pass
     except Exception as e:
         print(e)
